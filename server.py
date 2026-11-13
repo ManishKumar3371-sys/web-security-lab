@@ -12,7 +12,7 @@ import sys
 import urllib.parse
 from http import HTTPStatus
 
-PORT = 8080
+PORT = int(os.environ.get("PORT", 8080))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Mock default database of findings for the authorized audit engagement

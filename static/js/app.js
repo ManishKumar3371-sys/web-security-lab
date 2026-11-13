@@ -10,6 +10,124 @@ let auditState = {
   searchQuery: ''
 };
 
+// Default bundled audit project state (allows 100% static hosting on GitHub Pages)
+const DEFAULT_AUDIT_DATA = {
+  target_name: "Apex Financial Services (Core Web Portal)",
+  target_url: "https://portal.staging.apexfin.internal",
+  scope_type: "Grey-Box Web Application Penetration Test",
+  assessment_dates: "Nov 02, 2026 - Nov 12, 2026",
+  authorization_ref: "AUTH-SEC-2026-08892",
+  lead_analyst: "Authorized Security Assessment Team",
+  status: "Final Audit Review",
+  executive_summary: "An authorized grey-box web application penetration test was conducted against the staging core web portal. The assessment identified 8 distinct security issues across OWASP Top 10 categories, including 1 High severity authorization flaw in transaction review, 3 Medium severity configuration weaknesses, and multiple defensive header oversights. Comprehensive remediation steps have been verified.",
+  findings: [
+    {
+      id: "SEC-001",
+      title: "Broken Object Level Authorization (BOLA) in Transaction Statements",
+      severity: "High",
+      cvss_score: 7.5,
+      cvss_vector: "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+      owasp_category: "A01:2021 - Broken Access Control",
+      status: "Remediation Verified",
+      endpoint: "GET /api/v2/accounts/{account_id}/statement",
+      description: "Authenticated users were able to access financial statements belonging to other tenant accounts by directly tampering with the account_id path parameter without server-side tenancy verification.",
+      impact: "Unauthorized access to confidential banking records, transaction histories, and Personally Identifiable Information (PII).",
+      remediation: "Enforce object-level access controls using context-aware authorization middleware. Validate user session claims against target resource ownership at the data layer."
+    },
+    {
+      id: "SEC-002",
+      title: "Missing HTTP Strict Transport Security (HSTS) with Long Duration",
+      severity: "Medium",
+      cvss_score: 5.3,
+      cvss_vector: "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:N/A:N",
+      owasp_category: "A05:2021 - Security Misconfiguration",
+      status: "In Progress",
+      endpoint: "HTTPS Portal Gateway (All endpoints)",
+      description: "The web server response headers lack the Strict-Transport-Security header, allowing potential SSL-stripping and man-in-the-middle downgrade attacks on insecure Wi-Fi networks.",
+      impact: "Vulnerability to eavesdropping on the initial HTTP redirect prior to TLS negotiation.",
+      remediation: "Add 'Strict-Transport-Security: max-age=63072000; includeSubDomains; preload' to all HTTPS responses at the reverse proxy layer."
+    },
+    {
+      id: "SEC-003",
+      title: "Permissive Cross-Origin Resource Sharing (CORS) Policy",
+      severity: "Medium",
+      cvss_score: 6.5,
+      cvss_vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:N/A:N",
+      owasp_category: "A05:2021 - Security Misconfiguration",
+      status: "Pending Retest",
+      endpoint: "/api/v2/profile/me",
+      description: "The API reflects untrusted Origin headers and sets Access-Control-Allow-Credentials to true, allowing arbitrary external domains to read authenticated profile responses.",
+      impact: "Cross-site data exfiltration of user emails, phone numbers, and profile settings via malicious third-party scripts.",
+      remediation: "Maintain a strict whitelist of authorized origins instead of wildcard or echoed origins. Reject credentials on non-whitelisted cross-origin requests."
+    },
+    {
+      id: "SEC-004",
+      title: "Session Token Persisting Across Password Reset Cycle",
+      severity: "Medium",
+      cvss_score: 6.8,
+      cvss_vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:N",
+      owasp_category: "A07:2021 - Identification and Authentication Failures",
+      status: "Resolved",
+      endpoint: "POST /auth/reset-password",
+      description: "Existing active session JWTs and cookie sessions were not invalidated upon successful password reset, leaving compromised sessions active on other devices.",
+      impact: "Account takeover persistence if an attacker has stolen an older active session token.",
+      remediation: "Revoke all active refresh tokens and increment the user token version / invalidate server-side session stores on password changes."
+    },
+    {
+      id: "SEC-005",
+      title: "Insufficient Rate Limiting on One-Time Password (OTP) Verification",
+      severity: "High",
+      cvss_score: 7.3,
+      cvss_vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:H/A:N",
+      owasp_category: "A07:2021 - Identification and Authentication Failures",
+      status: "Resolved",
+      endpoint: "POST /auth/verify-2fa-otp",
+      description: "The multi-factor SMS/email token verification route did not enforce progressive back-off delays or IP/account-level rate locks after repeated invalid attempts.",
+      impact: "Potential brute-force guessing of 6-digit verification codes within the 10-minute expiry window.",
+      remediation: "Enforce sliding window rate-limiting (maximum 5 attempts per code), lockout policies, and shorten code validity to 3 minutes."
+    },
+    {
+      id: "SEC-006",
+      title: "Absence of Content Security Policy (CSP) Frame Ancestors Directive",
+      severity: "Low",
+      cvss_score: 4.3,
+      cvss_vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+      owasp_category: "A05:2021 - Security Misconfiguration",
+      status: "In Progress",
+      endpoint: "GET /checkout/confirm",
+      description: "The application lacks frame-ancestors 'none' or 'self' in Content-Security-Policy and does not return X-Frame-Options: DENY, rendering sensitive confirmation pages embeddable.",
+      impact: "UI redressing / clickjacking attack potential where users are tricked into authorizing fund transfers.",
+      remediation: "Implement 'Content-Security-Policy: frame-ancestors 'self'' and 'X-Frame-Options: SAMEORIGIN'."
+    },
+    {
+      id: "SEC-007",
+      title: "Verbose Server Software Information Disclosure via Server & X-Powered-By",
+      severity: "Informational",
+      cvss_score: 2.0,
+      cvss_vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+      owasp_category: "A05:2021 - Security Misconfiguration",
+      status: "Resolved",
+      endpoint: "All HTTP endpoints",
+      description: "HTTP response headers expose detailed backend versions ('Server: Apache/2.4.52 (Ubuntu)', 'X-Powered-By: Express/4.18.2').",
+      impact: "Facilitates attacker reconnaissance and targeted CVE exploitation based on specific framework patch levels.",
+      remediation: "Disable 'ServerTokens Prod' in Apache and call app.disable('x-powered-by') in Express."
+    },
+    {
+      id: "SEC-008",
+      title: "Reflected Context in Search Query Parameter Lacking Contextual Output Encoding",
+      severity: "Medium",
+      cvss_score: 6.1,
+      cvss_vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+      owasp_category: "A03:2021 - Injection",
+      status: "Resolved",
+      endpoint: "GET /knowledge-base/search?q=",
+      description: "The search query was reflected directly inside an HTML attribute context without attribute-level escaping, allowing payload execution in outdated browsers.",
+      impact: "Execution of arbitrary client-side script in the victim's session context.",
+      remediation: "Apply contextual output encoding (HTML attribute escaping) and adopt a strict Content Security Policy with nonces."
+    }
+  ]
+};
+
 // Preset Header Payloads
 const HEADER_PRESETS = {
   vulnerable: `HTTP/1.1 200 OK
@@ -121,17 +239,19 @@ function switchTab(tabId) {
 async function loadProjectData() {
   try {
     const res = await fetch("/api/project");
+    if (!res.ok) throw new Error("API not available");
     const data = await res.json();
     auditState.project = data;
     auditState.findings = data.findings || [];
-
-    renderOverview();
-    renderFindings();
-    renderQuickTable();
-    updateSidebarCounts();
   } catch (err) {
-    console.error("Failed to load project data:", err);
+    console.log("Serving bundled audit data (offline/static mode)");
+    auditState.project = DEFAULT_AUDIT_DATA;
+    auditState.findings = DEFAULT_AUDIT_DATA.findings;
   }
+  renderOverview();
+  renderFindings();
+  renderQuickTable();
+  updateSidebarCounts();
 }
 
 // Render Overview
@@ -339,11 +459,97 @@ async function runHeaderAnalysis() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ headers: rawInput.value })
     });
+    if (!res.ok) throw new Error("Backend not reached");
     const result = await res.json();
     renderHeaderResults(result);
   } catch (err) {
-    console.error("Header analysis failed:", err);
+    // Client-side fallback analyzer for static deployment (GitHub Pages)
+    const clientAnalysis = analyzeHeadersLocally(rawInput.value);
+    renderHeaderResults(clientAnalysis);
   }
+}
+
+function analyzeHeadersLocally(rawText) {
+  const lines = rawText.split("\n").map(l => l.trim()).filter(Boolean);
+  const headerMap = {};
+  lines.forEach(l => {
+    if (l.includes(":")) {
+      const idx = l.indexOf(":");
+      headerMap[l.slice(0, idx).trim().toLowerCase()] = l.slice(idx + 1).trim();
+    }
+  });
+
+  const checks = [
+    {
+      header: "Strict-Transport-Security",
+      present: "strict-transport-security" in headerMap,
+      value: headerMap["strict-transport-security"] || null,
+      importance: "High",
+      recommendation: "max-age=31536000; includeSubDomains; preload",
+      summary: "Enforces TLS encryption and prevents protocol downgrade / SSL stripping."
+    },
+    {
+      header: "Content-Security-Policy",
+      present: "content-security-policy" in headerMap,
+      value: headerMap["content-security-policy"] || null,
+      importance: "High",
+      recommendation: "default-src 'self'; script-src 'self' 'nonce-...'; object-src 'none';",
+      summary: "Restricts execution of unauthorized inline scripts and prevents XSS/injection."
+    },
+    {
+      header: "X-Frame-Options",
+      present: "x-frame-options" in headerMap || ("content-security-policy" in headerMap && headerMap["content-security-policy"].includes("frame-ancestors")),
+      value: headerMap["x-frame-options"] || ("content-security-policy" in headerMap && headerMap["content-security-policy"].includes("frame-ancestors") ? "(via CSP frame-ancestors)" : null),
+      importance: "Medium",
+      recommendation: "DENY or SAMEORIGIN",
+      summary: "Mitigates UI redressing and Clickjacking by disallowing cross-origin iframe embedding."
+    },
+    {
+      header: "X-Content-Type-Options",
+      present: "x-content-type-options" in headerMap,
+      value: headerMap["x-content-type-options"] || null,
+      importance: "Medium",
+      recommendation: "nosniff",
+      summary: "Prevents MIME-sniffing attacks where browsers execute non-script files as scripts."
+    },
+    {
+      header: "Referrer-Policy",
+      present: "referrer-policy" in headerMap,
+      value: headerMap["referrer-policy"] || null,
+      importance: "Low",
+      recommendation: "strict-origin-when-cross-origin",
+      summary: "Protects sensitive URL query tokens from leaking across external web requests."
+    },
+    {
+      header: "Permissions-Policy",
+      present: "permissions-policy" in headerMap,
+      value: headerMap["permissions-policy"] || null,
+      importance: "Low",
+      recommendation: "camera=(), microphone=(), geolocation=()",
+      summary: "Controls browser hardware APIs and features accessible in origin context."
+    }
+  ];
+
+  const weights = { High: 25, Medium: 15, Low: 10 };
+  const totalPossible = checks.reduce((acc, c) => acc + weights[c.importance], 0);
+  const earned = checks.filter(c => c.present).reduce((acc, c) => acc + weights[c.importance], 0);
+  const scorePct = Math.round((earned / totalPossible) * 100);
+
+  const leakHeaders = [];
+  ["server", "x-powered-by", "x-aspnet-version", "x-generator"].forEach(leak => {
+    if (leak in headerMap) {
+      leakHeaders.push({ header: leak, value: headerMap[leak] });
+    }
+  });
+
+  const grade = scorePct >= 90 ? "A" : scorePct >= 75 ? "B" : scorePct >= 55 ? "C" : scorePct >= 35 ? "D" : "F";
+  return {
+    score: scorePct,
+    grade: grade,
+    checks: checks,
+    information_leaks: leakHeaders,
+    total_evaluated: checks.length
+  };
 }
 
 function renderHeaderResults(data) {
