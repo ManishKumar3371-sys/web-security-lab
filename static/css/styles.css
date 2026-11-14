@@ -1348,3 +1348,131 @@ code, pre, .font-mono {
     border: 1px solid #ddd !important;
   }
 }
+
+/* ==========================================================================
+   Mobile & Responsive Viewport Optimizations (Zero Horizontal Scroll)
+   ========================================================================== */
+
+@media (max-width: 992px) {
+  .app-header {
+    height: auto;
+    padding: 10px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .header-left {
+    width: 100%;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .header-right {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .engagement-pill {
+    max-width: 100%;
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+
+  .app-container {
+    flex-direction: column;
+  }
+
+  .app-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 8px 10px;
+  }
+
+  .nav-menu {
+    flex-direction: row;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 6px;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .nav-menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-item {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .sidebar-scope-card {
+    display: none;
+  }
+
+  .content-stage, .main-stage, .tab-pane, .view-pane {
+    padding: 12px !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  .grid-2col, .grid-3col, .grid-4col, .dashboard-grid, .overview-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .card, .panel, .finding-card, .metric-box {
+    max-width: 100% !important;
+    padding: 14px !important;
+    overflow-x: hidden;
+  }
+
+  /* Tables horizontal scrolling without breaking page */
+  table, .table-container, .matrix-table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Pre and Code block wraps */
+  pre, code, .code-snippet {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    word-break: break-word !important;
+  }
+
+  /* Modal responsiveness */
+  .modal-box, .modal-content, .audit-modal {
+    width: 95% !important;
+    max-width: 95% !important;
+    margin: 10px auto !important;
+    padding: 14px !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .brand-name {
+    font-size: 14px;
+  }
+
+  .framework-tags {
+    display: none;
+  }
+
+  .btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .f-tag {
+    font-size: 9.5px;
+    padding: 1px 5px;
+  }
+}
